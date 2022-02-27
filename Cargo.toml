@@ -1,0 +1,8 @@
+[package]
+name = "tini-core-parser"
+version = "0.1.0"
+edition = "2021"
+authors = ["Alexey Golubev <dr.freecx@gmail.com>", "Vova Abdrakhmanov <369565@gmail.com>"]
+
+[lib]
+name = "tini"
