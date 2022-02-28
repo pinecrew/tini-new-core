@@ -49,40 +49,54 @@ impl<'a> Iterator for Parser<'a> {
             // поглащяем символ комментария
             self.reader.drop();
             // читаем до конца строки
-            let text = self.reader.take_while(|&c| c != '\n').unwrap();
+            let text = self.reader.take_while(|&c| c != '\n');
+
             self.pos += text.len() + 1;
+
             Some(ParseResult::Token(Token::Comment { text }))
         // токен начинается со перевода строки
         } else if chr == &'\n' {
             // поглащяем \n
             self.reader.drop();
+
             self.line += 1;
             self.pos = 1;
+
             Some(ParseResult::Token(Token::EndOfLine))
         // токен начинается с определения секции
         } else if chr == &'[' {
             // поглащаем [
             self.reader.drop();
             // собираем имя
-            let name = self.reader.take_while(|&c| c != ']').unwrap();
+            let name = self.reader.take_while(|&c| c != ']');
             // поглащяем ]
             self.reader.drop();
+
             self.pos += name.len() + 2;
+
             Some(ParseResult::Token(Token::Header { name }))
         // токен это пробел или табуляция
         } else if chr.is_whitespace() {
             // поглащаем символы
             let count = self.reader.drop_while(|&c| c.is_whitespace());
+
             self.pos += count;
+
             // и рекурсивно возвращаем токен
             self.next()
         // токен это ключ
         } else if chr.is_alphanumeric() {
-            let key = self.reader.take_while(|&c| c != '=').unwrap();
+            // получаем ключ
+            let key = self.reader.take_while(|&c| c != '=').trim().to_string();
             // поглощаем =
             self.reader.drop();
-            let value = self.reader.take_while(|&c| c != '\n' && c != self.comment).unwrap();
-            self.pos += key.len() + value.len() + 1;
+            // дропаем whitespace
+            let skip = self.reader.drop_while(|&c| c.is_whitespace());
+            // получаем значение
+            let value = self.reader.take_while(|&c| c != '\n' && c != self.comment).trim().to_string();
+
+            self.pos += key.len() + value.len() + 1 + skip;
+
             Some(ParseResult::Token(Token::KeyValue { key, value }))
         } else {
             None
@@ -133,7 +147,7 @@ mod test {
     fn key_value_with_one_line_comment() {
         let parser = Parser::new(';', "key = value ; this is key with value");
         let expected = vec![
-            ParseResult::Token(Token::KeyValue { key: "key ".to_string(), value: " value ".to_string() }),
+            ParseResult::Token(Token::KeyValue { key: "key".to_string(), value: "value".to_string() }),
             ParseResult::Token(Token::Comment { text: " this is key with value".to_string() }),
         ];
         let parsed: Vec<ParseResult> = parser.into_iter().collect();
@@ -160,17 +174,17 @@ skip_cutscene = true"#;
             ParseResult::Token(Token::Header { name: "graphics".to_string() }),
             ParseResult::Token(Token::Comment { text: " graphics options".to_string() }),
             ParseResult::Token(Token::EndOfLine),
-            ParseResult::Token(Token::KeyValue { key: "screen_size ".to_string(), value: " 1280x720 ".to_string() }),
+            ParseResult::Token(Token::KeyValue { key: "screen_size".to_string(), value: "1280x720".to_string() }),
             ParseResult::Token(Token::Comment { text: " fmt: WxH".to_string() }),
             ParseResult::Token(Token::EndOfLine),
-            ParseResult::Token(Token::KeyValue { key: "monitor ".to_string(), value: " 0 # not comment".to_string() }),
+            ParseResult::Token(Token::KeyValue { key: "monitor".to_string(), value: "0 # not comment".to_string() }),
             ParseResult::Token(Token::EndOfLine),
             ParseResult::Token(Token::EndOfLine),
             ParseResult::Token(Token::Header { name: "game".to_string() }),
             ParseResult::Token(Token::EndOfLine),
             ParseResult::Token(Token::Comment { text: " i know, you don't like it".to_string() }),
             ParseResult::Token(Token::EndOfLine),
-            ParseResult::Token(Token::KeyValue { key: "skip_cutscene ".to_string(), value: " true".to_string() }),
+            ParseResult::Token(Token::KeyValue { key: "skip_cutscene".to_string(), value: "true".to_string() }),
         ];
         let parsed: Vec<ParseResult> = parser.into_iter().collect();
         assert_eq!(expected, parsed);

@@ -23,7 +23,7 @@ impl<'a> StringReader<'a> {
         let _ = self.take();
     }
 
-    pub fn take_while<F>(&mut self, f: F) -> Option<String>
+    pub fn take_while<F>(&mut self, f: F) -> String
     where
         F: Fn(&char) -> bool,
     {
@@ -32,10 +32,9 @@ impl<'a> StringReader<'a> {
             if !f(value) {
                 break;
             }
-            let item = self.src.next().unwrap();
-            buffer.push(item);
+            buffer.push(self.src.next().unwrap());
         }
-        Some(buffer.iter().collect::<String>())
+        buffer.iter().collect::<String>()
     }
 
     pub fn drop_while<F>(&mut self, f: F) -> usize
