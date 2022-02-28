@@ -38,15 +38,18 @@ impl<'a> StringReader<'a> {
         Some(buffer.iter().collect::<String>())
     }
 
-    pub fn drop_while<F>(&mut self, f: F)
+    pub fn drop_while<F>(&mut self, f: F) -> usize
     where
         F: Fn(&char) -> bool,
     {
+        let mut count = 0;
         while let Some(value) = self.src.peek() {
             if !f(value) {
                 break;
             }
             let _ = self.src.next();
+            count += 1;
         }
+        count
     }
 }

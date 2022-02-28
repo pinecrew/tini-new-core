@@ -26,7 +26,7 @@ pub enum Token {
 
 impl<'a> Parser<'a> {
     pub fn new(comment: char, data: &'a str) -> Parser<'a> {
-        Parser { comment, reader: StringReader::new(data), line: 0, pos: 0 }
+        Parser { comment, reader: StringReader::new(data), line: 1, pos: 1 }
     }
 }
 
@@ -41,6 +41,7 @@ impl<'a> Iterator for Parser<'a> {
             return None;
         }
 
+        // это корректно
         let chr = chr.unwrap();
 
         // токен начинается с комментария
@@ -49,31 +50,39 @@ impl<'a> Iterator for Parser<'a> {
             self.reader.drop();
             // читаем до конца строки
             let text = self.reader.take_while(|&c| c != '\n').unwrap();
+            self.pos += text.len() + 1;
             Some(ParseResult::Token(Token::Comment { text }))
         // токен начинается со перевода строки
         } else if chr == &'\n' {
-            // поглащяем токен
+            // поглащяем \n
             self.reader.drop();
+            self.line += 1;
+            self.pos = 1;
             Some(ParseResult::Token(Token::EndOfLine))
         // токен начинается с определения секции
         } else if chr == &'[' {
-            // поглащаем
+            // поглащаем [
             self.reader.drop();
             // собираем имя
             let name = self.reader.take_while(|&c| c != ']').unwrap();
-            // ещё поглащяем
+            // поглащяем ]
             self.reader.drop();
+            self.pos += name.len() + 2;
             Some(ParseResult::Token(Token::Header { name }))
         // токен это пробел или табуляция
         } else if chr.is_whitespace() {
-            // поглащаем
-            self.reader.drop_while(|&c| c.is_whitespace());
+            // поглащаем символы
+            let count = self.reader.drop_while(|&c| c.is_whitespace());
+            self.pos += count;
+            // и рекурсивно возвращаем токен
             self.next()
         // токен это ключ
         } else if chr.is_alphanumeric() {
             let key = self.reader.take_while(|&c| c != '=').unwrap();
+            // поглощаем =
             self.reader.drop();
             let value = self.reader.take_while(|&c| c != '\n' && c != self.comment).unwrap();
+            self.pos += key.len() + value.len() + 1;
             Some(ParseResult::Token(Token::KeyValue { key, value }))
         } else {
             None
