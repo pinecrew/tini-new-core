@@ -8,13 +8,13 @@ pub struct Parser<'a> {
     pos: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ParseResult {
     Token(Token),
     Error { line: usize, pos: usize },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Token {
     EndOfLine,
     Comment { text: String },
@@ -78,5 +78,92 @@ impl<'a> Iterator for Parser<'a> {
         } else {
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::parser::{ParseResult, Parser, Token};
+
+    #[test]
+    fn one_line_comment() {
+        let parser = Parser::new(';', "; hello\n\n");
+        let expected = vec![
+            ParseResult::Token(Token::Comment { text: " hello".to_string() }),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::EndOfLine),
+        ];
+        let parsed: Vec<ParseResult> = parser.into_iter().collect();
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn section_with_one_line_comment() {
+        let parser = Parser::new(';', "\t[section]; comment text");
+        let expected = vec![
+            ParseResult::Token(Token::Header { name: "section".to_string() }),
+            ParseResult::Token(Token::Comment { text: " comment text".to_string() }),
+        ];
+        let parsed: Vec<ParseResult> = parser.into_iter().collect();
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn section_with_next_line_comment() {
+        let parser = Parser::new('#', "[section]\n# comment text");
+        let expected = vec![
+            ParseResult::Token(Token::Header { name: "section".to_string() }),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::Comment { text: " comment text".to_string() }),
+        ];
+        let parsed: Vec<ParseResult> = parser.into_iter().collect();
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn key_value_with_one_line_comment() {
+        let parser = Parser::new(';', "key = value ; this is key with value");
+        let expected = vec![
+            ParseResult::Token(Token::KeyValue { key: "key ".to_string(), value: " value ".to_string() }),
+            ParseResult::Token(Token::Comment { text: " this is key with value".to_string() }),
+        ];
+        let parsed: Vec<ParseResult> = parser.into_iter().collect();
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn all_in_one_ini() {
+        let ini_config = r#"; DO NOT EDIT
+; game configuration file
+[graphics] ; graphics options
+screen_size = 1280x720 ; fmt: WxH
+monitor = 0 # not comment
+
+[game]
+; i know, you don't like it
+skip_cutscene = true"#;
+        let parser = Parser::new(';', ini_config);
+        let expected = vec![
+            ParseResult::Token(Token::Comment { text: " DO NOT EDIT".to_string() }),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::Comment { text: " game configuration file".to_string() }),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::Header { name: "graphics".to_string() }),
+            ParseResult::Token(Token::Comment { text: " graphics options".to_string() }),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::KeyValue { key: "screen_size ".to_string(), value: " 1280x720 ".to_string() }),
+            ParseResult::Token(Token::Comment { text: " fmt: WxH".to_string() }),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::KeyValue { key: "monitor ".to_string(), value: " 0 # not comment".to_string() }),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::Header { name: "game".to_string() }),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::Comment { text: " i know, you don't like it".to_string() }),
+            ParseResult::Token(Token::EndOfLine),
+            ParseResult::Token(Token::KeyValue { key: "skip_cutscene ".to_string(), value: " true".to_string() }),
+        ];
+        let parsed: Vec<ParseResult> = parser.into_iter().collect();
+        assert_eq!(expected, parsed);
     }
 }
