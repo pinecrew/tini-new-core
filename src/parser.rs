@@ -34,15 +34,7 @@ impl<'a> Iterator for Parser<'a> {
     type Item = ParseResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // получаем первый токен
-        let chr = self.reader.peek();
-
-        if chr.is_none() {
-            return None;
-        }
-
-        // это корректно
-        let chr = chr.unwrap();
+        let chr = self.reader.peek()?;
 
         // токен начинается с комментария
         if chr == &self.comment {
