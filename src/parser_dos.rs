@@ -3,7 +3,7 @@ use crate::reader::StringReader;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Lexeme {
-    // \n
+    // \n | \r\n
     EndOfLine,
     // =[]
     Separator(char),
@@ -28,7 +28,7 @@ pub fn parse(data: &str, comment: char) -> Vec<Lexeme> {
     while let Some(&chr) = reader.peek() {
         if chr == comment {
             reader.drop();
-            let text = reader.take_while(|&c| c != '\n');
+            let text = reader.take_while(|&c| c != '\n' && c != '\r');
 
             pos += 1 + text.len();
 
@@ -39,6 +39,9 @@ pub fn parse(data: &str, comment: char) -> Vec<Lexeme> {
 
             line += 1;
             pos = 1;
+        } else if chr == '\r' {
+            reader.drop();
+            pos += 1;
         } else if chr == '[' {
             reader.drop();
             result.push(Lexeme::Separator('['));
