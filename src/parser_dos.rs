@@ -10,7 +10,7 @@ pub enum Lexeme {
     // \t | \s
     Whitespace(String),
     // ; (.*)$
-    Commect(String),
+    Comment(String),
     // is_token
     Token(String),
 }
@@ -32,7 +32,7 @@ pub fn parse(data: &str, comment: char) -> Vec<Lexeme> {
 
             pos += 1 + text.len();
 
-            result.push(Lexeme::Commect(text));
+            result.push(Lexeme::Comment(text));
         } else if chr == '\n' {
             reader.drop();
             result.push(Lexeme::EndOfLine);

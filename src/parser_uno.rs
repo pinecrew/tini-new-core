@@ -98,7 +98,7 @@ impl<'a> Iterator for Parser<'a> {
 
 #[cfg(test)]
 mod test {
-    use crate::parser::{ParseResult, Parser, Token};
+    use crate::parser_uno::{ParseResult, Parser, Token};
 
     #[test]
     fn one_line_comment() {
